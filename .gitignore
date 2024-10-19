@@ -15,6 +15,5 @@ __pycache__
 dev_deploy.sh
 load_audio.sh
 env
-Dockerfile
 audio_logs
 audio

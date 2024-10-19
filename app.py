@@ -26,7 +26,7 @@ from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, Perplexity
 from vision import Vision, GPT4Vision, ClaudeVision
 from vision.utils import process_image
 from generate_image import ReplicateGenerateImage
-from assistant import Assistant, AssistantResponse, GPTAssistant, ClaudeAssistant, extract_learned_context
+from assistant import Assistant, AssistantResponse, GPTAssistant, ClaudeAssistant, extract_learned_context, CustomModelAssistant
 
 
 ####################################################################################################
@@ -34,6 +34,7 @@ from assistant import Assistant, AssistantResponse, GPTAssistant, ClaudeAssistan
 ####################################################################################################
 
 EXPERIMENT_AI_PORT = os.environ.get('EXPERIMENT_AI_PORT',8000)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", None)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", None)
 
@@ -96,11 +97,13 @@ def get_assistant(app, mm: MultimodalRequest) -> Tuple[Assistant, str | None]:
     assistant_model = mm.assistant_model
 
     # Default assistant if none selected
-    if mm.assistant is None or (mm.assistant not in [ "gpt", "claude", "groq" ]):
+    if mm.assistant is None or (mm.assistant not in [ "gpt", "claude", "groq", "egov"]):
         return app.state.assistant, None    # None for assistant_model will force assistant to use its own internal default choice
     
     # Return assistant and a valid model for it
-    if mm.assistant == "gpt":
+    if mm.assistant == "egov":
+        return CustomModelAssistant(), None  # None for assistant_model will force assistant to use its own internal default choice
+    elif mm.assistant == "gpt":
         assistant_model = validate_assistant_model(model=mm.assistant_model, models=[ "gpt-4o", "gpt-3.5-turbo-1106", "gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-turbo-2024-04-09", "gpt-4-turbo-preview", "gpt-4-1106-preview" ])
         if mm.openai_key and len(mm.openai_key) > 0:
             return GPTAssistant(client=openai.AsyncOpenAI(api_key=mm.openai_key)), assistant_model
@@ -162,7 +165,7 @@ def get_next_filename():
 async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
     try:
         mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
-        # print(mm)
+        print(mm)
 
         # Transcribe voice prompt if it exists
         voice_prompt = ""
@@ -303,16 +306,16 @@ if __name__ == "__main__":
     parser.add_argument("--location", action="store", default="San Francisco", help="Set location address used for all queries (e.g., \"San Francisco\")")
     parser.add_argument("--save", action="store", help="Save DataForSEO response object to file")
     parser.add_argument("--search-api", action="store", default="perplexity", help="Search API to use (perplexity, serp, dataforseo)")
-    parser.add_argument("--assistant", action="store", default="gpt", help="Assistant to use (gpt, claude, groq)")
+    parser.add_argument("--assistant", action="store", default="egov", help="Assistant to use (gpt, claude, groq)")
     parser.add_argument("--server", action="store_true", help="Start server")
     parser.add_argument("--image", action="store", help="Image filepath for image query")
     parser.add_argument("--vision", action="store", help="Vision model to use (gpt-4o, gpt-4-vision-preview, claude-3-haiku-20240307, claude-3-sonnet-20240229, claude-3-opus-20240229)", default="gpt-4o")
     options = parser.parse_args()
 
     # AI clients
-    app.state.openai_client = openai.AsyncOpenAI()
+    app.state.openai_client = openai.AsyncOpenAI(api_key="123123")
     app.state.anthropic_client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
-    app.state.groq_client = groq.AsyncGroq()
+    app.state.groq_client = groq.AsyncGroq(api_key="123123")
 
     # Instantiate a default web search provider
     app.state.web_search = None
@@ -335,14 +338,16 @@ if __name__ == "__main__":
         raise ValueError("--vision must be one of: gpt-4o, gpt-4-vision-preview, claude-3-haiku-20240307, claude-3-sonnet-20240229, claude-3-opus-20240229")
 
     # Instantiate a default assistant
-    if options.assistant == "gpt":
+    if options.assistant == "egov":
+        app.state.assistant = CustomModelAssistant()
+    elif options.assistant == "gpt":
         app.state.assistant = GPTAssistant(client=app.state.openai_client)
     elif options.assistant == "claude":
         app.state.assistant = ClaudeAssistant(client=app.state.anthropic_client)
     elif options.assistant == "groq":
         app.state.assistant = GPTAssistant(client=app.state.groq_client)
     else:
-        raise ValueError("--assistant must be one of: gpt, claude, groq")
+        raise ValueError("--assistant must be one of: gpt, claude, groq, egov")
 
     # Load image if one was specified (for performing a test query)
     image_bytes = None
@@ -371,4 +376,4 @@ if __name__ == "__main__":
     # Run server
     if options.server:
         import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=int(EXPERIMENT_AI_PORT))
+        uvicorn.run(app, host="0.0.0.0", port=int(EXPERIMENT_AI_PORT), log_level="debug")

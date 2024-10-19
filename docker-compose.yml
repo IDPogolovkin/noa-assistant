@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  fastapi_app:
+    build: .
+    # ports:
+    #   - "8000:8000"  # Map host port 8000 to container port 8000
+    environment:
+      - ENV_FILE=.env  # Load environment variables
+    volumes:
+      - .:/app  # Mount the current directory inside the container

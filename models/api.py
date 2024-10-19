@@ -54,6 +54,9 @@ class VisionModel(str, Enum):
     CLAUDE_SONNET = "claude-3-sonnet-20240229"
     CLAUDE_OPUS = "claude-3-opus-20240229"
 
+class EgovAIModel(str, Enum):
+    EGOV_AI = "egov"
+
 class GenerateImageService(str, Enum):
     REPLICATE   = "replicate"
 
@@ -81,7 +84,7 @@ class MultimodalRequest(BaseModel):
 class MultimodalResponse(BaseModel):
     user_prompt: str
     response: str
-    image: str
+    image: Optional[str]
     token_usage_by_model: Dict[str, TokenUsage]
     capabilities_used: List[Capability]
     total_tokens: int
