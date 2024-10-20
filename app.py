@@ -9,7 +9,7 @@ from datetime import datetime
 from io import BytesIO
 import os
 import traceback
-from typing import Annotated, Dict, List, Tuple
+from typing import Annotated, Dict, List, Tuple, Optional
 import glob
 import openai
 import anthropic
@@ -69,7 +69,7 @@ async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
     buffer = BytesIO()
     buffer.name = "voice.mp4"
     audio.export(buffer, format="mp4")
-
+    buffer.seek(0)
     # Whisper
     transcript = await client.audio.translations.create(
         model="whisper-1", 
@@ -102,8 +102,12 @@ def get_assistant(app, mm: MultimodalRequest) -> Tuple[Assistant, str | None]:
     assistant_model = mm.assistant_model
 
     # Default assistant if none selected
-    if mm.assistant is None or (mm.assistant not in [ "gpt", "claude", "groq", "egov"]):
-        return app.state.assistant, None    # None for assistant_model will force assistant to use its own internal default choice
+    # if mm.assistant is None or (mm.assistant not in [ "gpt", "claude", "groq", "egov"]):
+    #     return app.state.assistant, None    # None for assistant_model will force assistant to use its own internal default choice
+
+    # Set default assistant to 'egov' if not provided
+    if not mm.assistant:
+        mm.assistant = 'egov'
     
     # Return assistant and a valid model for it
     if mm.assistant == "egov":
@@ -191,18 +195,33 @@ async def validation_exception_handler(request, exc):
     )
 
 @app.post("/mm")
-async def api_mm(request: Request, messages: Annotated[str, Form()],
-    location: Annotated[str, Form()],
-    time: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
+async def api_mm(
+    request: Request,
+    mm: Annotated[Optional[str], Form()] = None,
+    messages: Annotated[Optional[str], Form()] = None,
+    location: Annotated[Optional[str], Form()] = None,
+    time: Annotated[Optional[str], Form()] = None,
+    prompt: Annotated[Optional[str], Form()] = None,
+    assistant: Annotated[Optional[str], Form()] = None,
+    audio: UploadFile = None,
+    image: UploadFile = None
+):
     try:
-         # Construct the mm object from the form data
-        mm_dict = {
-            'messages': json.loads(messages),
-            'address': location,
-            'local_time': time,
-            # Include other fields if necessary
-        }
-        mm = MultimodalRequest(**mm_dict)
+        if mm:
+            # If 'mm' field is provided, parse it directly
+            mm_data = json.loads(mm)
+            mm = MultimodalRequest(**mm_data)
+        else:
+            # Construct the mm object from the form data
+            mm_dict = {
+                'messages': json.loads(messages) if messages else [],
+                'address': location,
+                'local_time': time,
+                'prompt': prompt,
+                'assistant': assistant or 'egov',  # Default to 'egov'
+                # Include other fields if necessary
+            }
+            mm = MultimodalRequest(**mm_dict)
         print(mm)
 
         # Transcribe voice prompt if it exists
@@ -210,23 +229,22 @@ async def api_mm(request: Request, messages: Annotated[str, Form()],
         if audio:
             audio_bytes = await audio.read()
             if mm.testing_mode:
-                #  save audio file
-                # set timestamp
-                # filepath = "audio.wav" + str(datetime.now().timestamp())
+                # Save audio file
                 filepath = get_next_filename()
                 with open(filepath, "wb") as f:
                     f.write(audio_bytes)
             if mm.openai_key and len(mm.openai_key) > 0:
-                voice_prompt = await transcribe(client=openai.AsyncOpenAI(api_key=mm.openai_key), audio_bytes=audio_bytes)
+                client = openai.AsyncOpenAI(api_key=mm.openai_key)
             else:
-                voice_prompt = await transcribe(client=request.app.state.openai_client, audio_bytes=audio_bytes)
-
+                # Initialize your OpenAI client here
+                client = openai.AsyncOpenAI(api_key="YOUR_DEFAULT_OPENAI_API_KEY")
+            voice_prompt = await transcribe(client=client, audio_bytes=audio_bytes)
 
         # Construct final prompt
-        if mm.prompt is None or len(mm.prompt) == 0 or mm.prompt.isspace() or mm.prompt == "":
+        if not mm.prompt or mm.prompt.strip() == "":
             user_prompt = voice_prompt
         else:
-            user_prompt = mm.prompt + " " + voice_prompt
+            user_prompt = f"{mm.prompt} {voice_prompt}"
 
         # Image data
         image_bytes = (await image.read()) if image else None
@@ -414,4 +432,7 @@ if __name__ == "__main__":
     # Run server
     if options.server:
         import uvicorn
+        
+        app.state.assistant = CustomModelAssistant()  # Set default assistant
+
         uvicorn.run(app, host="0.0.0.0", port=int(EXPERIMENT_AI_PORT), log_level="debug")

@@ -63,8 +63,9 @@ class GenerateImageService(str, Enum):
 class MultimodalRequest(BaseModel):
     messages: Optional[List[Message]]
     prompt: Optional[str] = ""
+    gps: Optional[List[float]]
     noa_system_prompt: Optional[str] = None
-    assistant: Optional[str] = None         # assistant class: gpt, claude, perplexity, groq
+    assistant: Optional[str] = 'egov'         # assistant class: gpt, claude, perplexity, groq
     assistant_model: Optional[str] = None   # specific model for the assistant class
     search_api: Optional[SearchAPI] = None
     search_engine: Optional[SearchEngine] = SearchEngine.GOOGLE
@@ -90,8 +91,8 @@ class MultimodalResponse(BaseModel):
     total_tokens: int
     input_tokens: int
     output_tokens: int
-    timings: str
-    debug_tools: str
+    timings: Optional[str]
+    debug_tools: Optional[str]
     # topic_changed: bool  # Add this field
 
 class ExtractLearnedContextRequest(BaseModel):
