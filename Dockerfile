@@ -23,4 +23,4 @@ COPY . .
 # EXPOSE 8000
 
 # Command to run the FastAPI app with optional arguments
-CMD ["python", "app.py", "--server", "--assistant", "egov"]
+CMD ["python", "app.py", "--server", "--vision", "gpt-4-vision-preview", "--assistant", "egov"]
