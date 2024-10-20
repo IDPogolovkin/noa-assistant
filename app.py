@@ -164,6 +164,10 @@ def get_next_filename():
 
 @app.post("/mm")
 async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
+    form = await request.form()
+    print("Received form data:", form)
+    mm_str = form.get('mm')
+    print("Received mm data:", mm_str)
     try:
         print(f"Received mm data: {mm}")
         mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
