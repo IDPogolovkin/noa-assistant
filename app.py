@@ -20,6 +20,7 @@ from fastapi import FastAPI, status, Form, UploadFile, Request
 from pydantic import BaseModel, ValidationError
 from fastapi.exceptions import HTTPException
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
@@ -164,8 +165,10 @@ def get_next_filename():
 @app.post("/mm")
 async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
     try:
+        print(f"Received mm data: {mm}")
         mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
-        print(mm)
+    except ValidationError as e:
+        print("Validation error:", e.json())
 
         # Transcribe voice prompt if it exists
         voice_prompt = ""
