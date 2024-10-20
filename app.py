@@ -8,7 +8,6 @@ import asyncio
 from datetime import datetime
 from io import BytesIO
 import os
-import json
 import traceback
 from typing import Annotated, Dict, List, Tuple
 import glob
@@ -27,7 +26,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, SearchEngine
+from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
 from vision import Vision, GPT4Vision, ClaudeVision
 from vision.utils import process_image
@@ -194,62 +193,14 @@ async def validation_exception_handler(request, exc):
     )
 
 @app.post("/mm")
-async def api_mm(
-    request: Request,
-    mm: Optional[str] = Form(None),
-    messages: Optional[str] = Form(None),
-    location: Optional[str] = Form(None),
-    time: Optional[str] = Form(None),
-    audio: Optional[UploadFile] = File(None),
-    image: Optional[UploadFile] = File(None)
-):
-    # Print received form data
-    form = await request.form()
-    print("Received form data:")
-    for field in form:
-        value = form[field]
-        if isinstance(value, UploadFile):
-            print(f"{field}: UploadFile(filename='{value.filename}', size={value.spool_max_size}, content_type='{value.content_type}')")
-        else:
-            print(f"{field}: {value}")
+async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[UploadFile] = File(None), image: Optional[UploadFile] = File(None)):
 
-    # Handle 'mm' field or construct 'mm' from other fields
-    if mm:
-        try:
-            mm = MultimodalRequest.model_validate_json(mm)
-        except ValidationError as e:
-            print(f"Validation error: {e}")
-            raise HTTPException(status_code=422, detail=jsonable_encoder(e.errors()))
-    else:
-        # Construct mm from individual fields
-        try:
-            messages_list = json.loads(messages) if messages else []
-        except json.JSONDecodeError as e:
-            raise HTTPException(status_code=400, detail="Invalid JSON in 'messages' field")
+    try:
+        print(f"Received mm data: {mm}")
+        mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
+    except ValidationError as e:
+        print("Validation error:", e.json())
 
-        mm = MultimodalRequest(
-            messages=messages_list,
-            address=location,
-            local_time=time,
-            # Set other fields as necessary, using default values or None
-            prompt="",
-            noa_system_prompt=None,
-            assistant=None,
-            assistant_model=None,
-            search_api=None,
-            search_engine=SearchEngine.GOOGLE,
-            max_search_results=10,
-            latitude=None,
-            longitude=None,
-            vision=None,
-            speculative_vision=True,
-            perplexity_key=None,
-            openai_key=None,
-            generate_image=0,
-            generate_image_service=GenerateImageService.REPLICATE,
-            testing_mode=False
-        )
-        
         # Transcribe voice prompt if it exists
         voice_prompt = ""
         if audio:
@@ -303,8 +254,7 @@ async def api_mm(
                     input_tokens=0,
                     output_tokens=0,
                     timings="",
-                    debug_tools="",
-                    topic_changed=True
+                    debug_tools=""
                 )
 
         # Get assistant tool providers
@@ -327,8 +277,8 @@ async def api_mm(
                 vision=vision,
                 speculative_vision=mm.speculative_vision
             )
-            
-            result = MultimodalResponse(
+
+            return MultimodalResponse(
                 user_prompt=user_prompt,
                 response=assistant_response.response,
                 image=assistant_response.image,
@@ -338,14 +288,15 @@ async def api_mm(
                 input_tokens=0,
                 output_tokens=0,
                 timings=assistant_response.timings,
-                debug_tools=assistant_response.debug_tools,
-                topic_changed=True
+                debug_tools=assistant_response.debug_tools
             )
-            print("Returning result:", result)
-            return result
         except Exception as e:
             print(f"{traceback.format_exc()}")
             raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
+
+    except Exception as e:
+        print(f"{traceback.format_exc()}")
+        raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
 
 @app.post("/extract_learned_context")
 async def api_extract_learned_context(request: Request, params: Annotated[str, Form()]):

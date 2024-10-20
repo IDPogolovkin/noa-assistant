@@ -2,7 +2,6 @@ import requests
 from typing import List, Dict
 from .assistant import Assistant, AssistantResponse
 from models import Message, Capability
-import httpx
 
 class CustomModelAssistant(Assistant):
     def __init__(self):
@@ -22,10 +21,9 @@ class CustomModelAssistant(Assistant):
         vision: None,
         speculative_vision: bool
     ) -> AssistantResponse:
-        # Make the asynchronous POST request
+        # Make the POST request
         payload = {"user_question": prompt}
-        async with httpx.AsyncClient() as client:
-            response = await client.post(self.api_url, json=payload)
+        response = requests.post(self.api_url, json=payload)
 
         # Handle the response
         if response.status_code == 200:
