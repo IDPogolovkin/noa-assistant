@@ -327,8 +327,8 @@ async def api_mm(
                 vision=vision,
                 speculative_vision=mm.speculative_vision
             )
-
-            return MultimodalResponse(
+            
+            result = MultimodalResponse(
                 user_prompt=user_prompt,
                 response=assistant_response.response,
                 image=assistant_response.image,
@@ -341,6 +341,8 @@ async def api_mm(
                 debug_tools=assistant_response.debug_tools,
                 topic_changed=True
             )
+            print("Returning result:", result)
+            return result
         except Exception as e:
             print(f"{traceback.format_exc()}")
             raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
