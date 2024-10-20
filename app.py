@@ -14,6 +14,7 @@ import glob
 import openai
 import anthropic
 import groq
+import json
 from pydantic import BaseModel, ValidationError
 from pydub import AudioSegment
 from fastapi import FastAPI, status, Form, UploadFile, Request
@@ -162,9 +163,18 @@ def get_next_filename():
         return oldest_file
 
 @app.post("/mm")
-async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
+async def api_mm(request: Request, messages: Annotated[str, Form()],
+    location: Annotated[str, Form()],
+    time: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
     try:
-        mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
+         # Construct the mm object from the form data
+        mm_dict = {
+            'messages': json.loads(messages),
+            'address': location,
+            'local_time': time,
+            # Include other fields if necessary
+        }
+        mm = MultimodalRequest(**mm_dict)
         print(mm)
 
         # Transcribe voice prompt if it exists
