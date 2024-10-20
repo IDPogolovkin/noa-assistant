@@ -17,8 +17,12 @@ import groq
 from pydantic import BaseModel, ValidationError
 from pydub import AudioSegment
 from fastapi import FastAPI, status, Form, UploadFile, Request
+from typing import Optional
+from fastapi import File
 from pydantic import BaseModel, ValidationError
 from fastapi.exceptions import HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -51,9 +55,11 @@ class Checker:
         self.model = model
 
     def __call__(self, data: str = Form(...)):
+        print(f"Received mm data in Checker: {mm}")
         try:
             return self.model.model_validate_json(data)
         except ValidationError as e:
+            print(f"Validation error in Checker: {e}")
             raise HTTPException(
                 detail=jsonable_encoder(e.errors()),
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -161,13 +167,34 @@ def get_next_filename():
         # All files exist, so find the oldest one to overwrite
         oldest_file = min(existing_files, key=os.path.getmtime)
         return oldest_file
+    
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    print(f"Validation error: {exc}")
+    print(f"Request URL: {request.url}")
+    print(f"Request headers: {request.headers}")
+
+    # Try to get the form data
+    try:
+        form = await request.form()
+        print("Received form data:")
+        for field in form:
+            value = form[field]
+            if isinstance(value, UploadFile):
+                print(f"{field}: {value.filename} ({value.content_type})")
+            else:
+                print(f"{field}: {value}")
+    except Exception as e:
+        print(f"Error reading form data: {e}")
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
+    )
 
 @app.post("/mm")
-async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
-    form = await request.form()
-    print("Received form data:", form)
-    mm_str = form.get('mm')
-    print("Received mm data:", mm_str)
+async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[UploadFile] = File(None), image: Optional[UploadFile] = File(None)):
+
     try:
         print(f"Received mm data: {mm}")
         mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
