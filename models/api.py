@@ -63,7 +63,7 @@ class GenerateImageService(str, Enum):
 class MultimodalRequest(BaseModel):
     messages: Optional[List[Message]]
     prompt: Optional[str] = ""
-    gps: Optional[List[float]]
+    gps: Optional[List[float]] = None
     noa_system_prompt: Optional[str] = None
     assistant: Optional[str] = 'egov'         # assistant class: gpt, claude, perplexity, groq
     assistant_model: Optional[str] = None   # specific model for the assistant class

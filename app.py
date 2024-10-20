@@ -203,6 +203,7 @@ async def api_mm(
     time: Annotated[Optional[str], Form()] = None,
     prompt: Annotated[Optional[str], Form()] = None,
     assistant: Annotated[Optional[str], Form()] = None,
+    gps: Annotated[Optional[str], Form()] = None,
     audio: UploadFile = None,
     image: UploadFile = None
 ):
@@ -219,6 +220,7 @@ async def api_mm(
                 'local_time': time,
                 'prompt': prompt,
                 'assistant': assistant or 'egov',  # Default to 'egov'
+                'gps': json.loads(gps) if gps else None,
                 # Include other fields if necessary
             }
             mm = MultimodalRequest(**mm_dict)
@@ -432,7 +434,7 @@ if __name__ == "__main__":
     # Run server
     if options.server:
         import uvicorn
-        
+
         app.state.assistant = CustomModelAssistant()  # Set default assistant
 
         uvicorn.run(app, host="0.0.0.0", port=int(EXPERIMENT_AI_PORT), log_level="debug")
