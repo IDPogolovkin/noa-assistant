@@ -193,13 +193,9 @@ async def validation_exception_handler(request, exc):
     )
 
 @app.post("/mm")
-async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[UploadFile] = File(None), image: Optional[UploadFile] = File(None)):
-
+async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
     try:
-        print(f"Received mm data: {mm}")
         mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
-    except ValidationError as e:
-        print("Validation error:", e.json())
 
         # Transcribe voice prompt if it exists
         voice_prompt = ""
