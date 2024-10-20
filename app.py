@@ -17,12 +17,9 @@ import groq
 from pydantic import BaseModel, ValidationError
 from pydub import AudioSegment
 from fastapi import FastAPI, status, Form, UploadFile, Request
-from typing import Optional
-from fastapi import File
 from pydantic import BaseModel, ValidationError
 from fastapi.exceptions import HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -55,7 +52,7 @@ class Checker:
         self.model = model
 
     def __call__(self, data: str = Form(...)):
-        print(f"Received mm data in Checker: {mm}")
+        print(f"Received mm data in Checker: {data}")
         try:
             return self.model.model_validate_json(data)
         except ValidationError as e:
@@ -167,7 +164,7 @@ def get_next_filename():
         # All files exist, so find the oldest one to overwrite
         oldest_file = min(existing_files, key=os.path.getmtime)
         return oldest_file
-    
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     print(f"Validation error: {exc}")
@@ -195,7 +192,10 @@ async def validation_exception_handler(request, exc):
 @app.post("/mm")
 async def api_mm(request: Request, mm: Annotated[str, Form()], audio : UploadFile = None, image: UploadFile = None):
     try:
+        print(f"Received mm data: {mm}")
         mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
+    except ValidationError as e:
+        print("Validation error:", e.json())
 
         # Transcribe voice prompt if it exists
         voice_prompt = ""
