@@ -216,7 +216,7 @@ async def api_mm(
     # Handle 'mm' field or construct 'mm' from other fields
     if mm:
         try:
-            mm = MultimodalRequest.parse_raw(mm)
+            mm = MultimodalRequest.model_validate_json(mm)
         except ValidationError as e:
             print(f"Validation error: {e}")
             raise HTTPException(status_code=422, detail=jsonable_encoder(e.errors()))
@@ -303,7 +303,8 @@ async def api_mm(
                     input_tokens=0,
                     output_tokens=0,
                     timings="",
-                    debug_tools=""
+                    debug_tools="",
+                    topic_changed=True
                 )
 
         # Get assistant tool providers
@@ -337,7 +338,8 @@ async def api_mm(
                 input_tokens=0,
                 output_tokens=0,
                 timings=assistant_response.timings,
-                debug_tools=assistant_response.debug_tools
+                debug_tools=assistant_response.debug_tools,
+                topic_changed=True
             )
         except Exception as e:
             print(f"{traceback.format_exc()}")

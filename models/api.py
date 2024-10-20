@@ -92,6 +92,7 @@ class MultimodalResponse(BaseModel):
     output_tokens: int
     timings: str
     debug_tools: str
+    topic_changed: bool  # Add this field
 
 class ExtractLearnedContextRequest(BaseModel):
     messages: List[Message]
