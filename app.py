@@ -213,21 +213,21 @@ async def api_mm(
         else:
             print(f"{field}: {value}")
 
-    # Handle 'mm' field or construct 'mm_parsed' from other fields
+    # Handle 'mm' field or construct 'mm' from other fields
     if mm:
         try:
-            mm_parsed = MultimodalRequest.parse_raw(mm)
+            mm = MultimodalRequest.parse_raw(mm)
         except ValidationError as e:
             print(f"Validation error: {e}")
             raise HTTPException(status_code=422, detail=jsonable_encoder(e.errors()))
     else:
-        # Construct mm_parsed from individual fields
+        # Construct mm from individual fields
         try:
             messages_list = json.loads(messages) if messages else []
         except json.JSONDecodeError as e:
             raise HTTPException(status_code=400, detail="Invalid JSON in 'messages' field")
 
-        mm_parsed = MultimodalRequest(
+        mm = MultimodalRequest(
             messages=messages_list,
             address=location,
             local_time=time,
@@ -268,10 +268,10 @@ async def api_mm(
 
 
         # Construct final prompt
-        if mm_parsed.prompt is None or len(mm_parsed.prompt) == 0 or mm_parsed.prompt.isspace() or mm_parsed.prompt == "":
+        if mm.prompt is None or len(mm.prompt) == 0 or mm.prompt.isspace() or mm.prompt == "":
             user_prompt = voice_prompt
         else:
-            user_prompt = mm_parsed.prompt + " " + voice_prompt
+            user_prompt = mm.prompt + " " + voice_prompt
 
         # Image data
         image_bytes = (await image.read()) if image else None
@@ -279,10 +279,10 @@ async def api_mm(
         if image_bytes:
             image_bytes = process_image(image_bytes)
         # Location data
-        address = mm_parsed.address
+        address = mm.address
 
         # User's local time
-        local_time = mm_parsed.local_time
+        local_time = mm.local_time
 
         # Image generation (bypasses assistant altogether)
         if mm.generate_image != 0:
@@ -307,12 +307,12 @@ async def api_mm(
                 )
 
         # Get assistant tool providers
-        web_search: WebSearch = get_web_search_provider(app=request.app, mm=mm_parsed)
-        vision: Vision = get_vision_provider(app=request.app, mm=mm_parsed)
+        web_search: WebSearch = get_web_search_provider(app=request.app, mm=mm)
+        vision: Vision = get_vision_provider(app=request.app, mm=mm)
         
         # Call the assistant and deliver the response
         try:
-            assistant, assistant_model = get_assistant(app=app, mm=mm_parsed)
+            assistant, assistant_model = get_assistant(app=app, mm=mm)
             assistant_response: AssistantResponse = await assistant.send_to_assistant(
                 prompt=user_prompt,
                 noa_system_prompt=mm.noa_system_prompt,
