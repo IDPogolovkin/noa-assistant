@@ -343,10 +343,6 @@ async def api_mm(
             print(f"{traceback.format_exc()}")
             raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
 
-    except Exception as e:
-        print(f"{traceback.format_exc()}")
-        raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
-
 @app.post("/extract_learned_context")
 async def api_extract_learned_context(request: Request, params: Annotated[str, Form()]):
     try:
