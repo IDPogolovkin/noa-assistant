@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime
 from io import BytesIO
 import os
+import json
 import traceback
 from typing import Annotated, Dict, List, Tuple
 import glob
@@ -26,7 +27,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse
+from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, SearchEngine
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
 from vision import Vision, GPT4Vision, ClaudeVision
 from vision.utils import process_image
@@ -193,14 +194,62 @@ async def validation_exception_handler(request, exc):
     )
 
 @app.post("/mm")
-async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[UploadFile] = File(None), image: Optional[UploadFile] = File(None)):
+async def api_mm(
+    request: Request,
+    mm: Optional[str] = Form(None),
+    messages: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    time: Optional[str] = Form(None),
+    audio: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None)
+):
+    # Print received form data
+    form = await request.form()
+    print("Received form data:")
+    for field in form:
+        value = form[field]
+        if isinstance(value, UploadFile):
+            print(f"{field}: UploadFile(filename='{value.filename}', size={value.spool_max_size}, content_type='{value.content_type}')")
+        else:
+            print(f"{field}: {value}")
 
-    try:
-        print(f"Received mm data: {mm}")
-        mm: MultimodalRequest = Checker(MultimodalRequest)(data=mm)
-    except ValidationError as e:
-        print("Validation error:", e.json())
+    # Handle 'mm' field or construct 'mm_parsed' from other fields
+    if mm:
+        try:
+            mm_parsed = MultimodalRequest.parse_raw(mm)
+        except ValidationError as e:
+            print(f"Validation error: {e}")
+            raise HTTPException(status_code=422, detail=jsonable_encoder(e.errors()))
+    else:
+        # Construct mm_parsed from individual fields
+        try:
+            messages_list = json.loads(messages) if messages else []
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail="Invalid JSON in 'messages' field")
 
+        mm_parsed = MultimodalRequest(
+            messages=messages_list,
+            address=location,
+            local_time=time,
+            # Set other fields as necessary, using default values or None
+            prompt="",
+            noa_system_prompt=None,
+            assistant=None,
+            assistant_model=None,
+            search_api=None,
+            search_engine=SearchEngine.GOOGLE,
+            max_search_results=10,
+            latitude=None,
+            longitude=None,
+            vision=None,
+            speculative_vision=True,
+            perplexity_key=None,
+            openai_key=None,
+            generate_image=0,
+            generate_image_service=GenerateImageService.REPLICATE,
+            testing_mode=False
+        )
+        
         # Transcribe voice prompt if it exists
         voice_prompt = ""
         if audio:
@@ -219,10 +268,10 @@ async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[
 
 
         # Construct final prompt
-        if mm.prompt is None or len(mm.prompt) == 0 or mm.prompt.isspace() or mm.prompt == "":
+        if mm_parsed.prompt is None or len(mm_parsed.prompt) == 0 or mm_parsed.prompt.isspace() or mm_parsed.prompt == "":
             user_prompt = voice_prompt
         else:
-            user_prompt = mm.prompt + " " + voice_prompt
+            user_prompt = mm_parsed.prompt + " " + voice_prompt
 
         # Image data
         image_bytes = (await image.read()) if image else None
@@ -230,10 +279,10 @@ async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[
         if image_bytes:
             image_bytes = process_image(image_bytes)
         # Location data
-        address = mm.address
+        address = mm_parsed.address
 
         # User's local time
-        local_time = mm.local_time
+        local_time = mm_parsed.local_time
 
         # Image generation (bypasses assistant altogether)
         if mm.generate_image != 0:
@@ -258,12 +307,12 @@ async def api_mm(request: Request, mm: Annotated[str, Form()], audio : Optional[
                 )
 
         # Get assistant tool providers
-        web_search: WebSearch = get_web_search_provider(app=request.app, mm=mm)
-        vision: Vision = get_vision_provider(app=request.app, mm=mm)
+        web_search: WebSearch = get_web_search_provider(app=request.app, mm=mm_parsed)
+        vision: Vision = get_vision_provider(app=request.app, mm=mm_parsed)
         
         # Call the assistant and deliver the response
         try:
-            assistant, assistant_model = get_assistant(app=app, mm=mm)
+            assistant, assistant_model = get_assistant(app=app, mm=mm_parsed)
             assistant_response: AssistantResponse = await assistant.send_to_assistant(
                 prompt=user_prompt,
                 noa_system_prompt=mm.noa_system_prompt,
