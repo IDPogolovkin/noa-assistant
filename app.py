@@ -208,6 +208,14 @@ async def api_mm(
     image: UploadFile = None
 ):
     try:
+        form = await request.form()
+        print("Received form data:")
+        for field in form:
+            value = form[field]
+            if isinstance(value, UploadFile):
+                print(f"{field}: {value.filename} ({value.content_type})")
+            else:
+                print(f"{field}: {value}")
         if mm:
             # If 'mm' field is provided, parse it directly
             mm_data = json.loads(mm)
@@ -224,7 +232,7 @@ async def api_mm(
                 # Include other fields if necessary
             }
             mm = MultimodalRequest(**mm_dict)
-        print(mm)
+        print(f"Constructed mm object: {mm}")
 
         # Transcribe voice prompt if it exists
         voice_prompt = ""
@@ -247,6 +255,10 @@ async def api_mm(
             user_prompt = voice_prompt
         else:
             user_prompt = f"{mm.prompt} {voice_prompt}"
+        # **Add this validation**
+        if not user_prompt:
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
+        print(f"Final user_prompt: {user_prompt}")
 
         # Image data
         image_bytes = (await image.read()) if image else None

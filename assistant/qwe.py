@@ -1,4 +1,3 @@
-import requests
 from typing import List, Dict
 from .assistant import Assistant, AssistantResponse
 from models import Message, Capability
@@ -21,8 +20,8 @@ class CustomModelAssistant(Assistant):
         vision: None,
         speculative_vision: bool
     ) -> AssistantResponse:
+        # Make the POST request asynchronously
         print(f"Assistant received prompt: {prompt}")
-        # Make the POST request
         if not prompt.strip():
             # Handle empty prompt case
             return AssistantResponse(
@@ -34,7 +33,11 @@ class CustomModelAssistant(Assistant):
             )
         payload = {"user_question": prompt}
         print(f"Payload for egov API: {payload}")
-        response = requests.post(self.api_url, json=payload)
+
+        # Use an asynchronous HTTP client like `httpx` instead of `requests`
+        import httpx
+        async with httpx.AsyncClient(timeout=55) as client:
+            response = await client.post(self.api_url, json=payload)
 
         # Handle the response
         if response.status_code == 200:
@@ -60,5 +63,5 @@ class CustomModelAssistant(Assistant):
             )
 
         return returned_response
-    
+
 Assistant.register(CustomModelAssistant)
