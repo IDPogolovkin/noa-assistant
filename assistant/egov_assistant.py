@@ -35,6 +35,7 @@ class CustomModelAssistant(Assistant):
         payload = {"user_question": prompt}
         print(f"Payload for egov API: {payload}")
         response = requests.post(self.api_url, json=payload)
+        print(f"Response from eGov API: {response.status_code} {response.text}")
 
         # Handle the response
         if response.status_code == 200:

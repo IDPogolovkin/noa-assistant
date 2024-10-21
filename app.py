@@ -24,7 +24,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
-from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse
+from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, Message
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
 from vision import Vision, GPT4Vision, ClaudeVision
 from vision.utils import process_image
@@ -252,13 +252,22 @@ async def api_mm(
 
         # Construct final prompt
         if not mm.prompt or mm.prompt.strip() == "":
+            mm.prompt = voice_prompt  # Set the prompt to the transcribed audio
             user_prompt = voice_prompt
         else:
             user_prompt = f"{mm.prompt} {voice_prompt}"
+            # Set mm.prompt to user_prompt to ensure it's not None
+            
+        mm.prompt = user_prompt
+
+        print(f"Final user_prompt: {user_prompt}")
         # **Add this validation**
         if not user_prompt:
             raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
         print(f"Final user_prompt: {user_prompt}")
+
+        if not mm.messages:
+            mm.messages = [Message(role='user', content=mm.prompt)]
 
         # Image data
         image_bytes = (await image.read()) if image else None
