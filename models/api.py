@@ -7,7 +7,7 @@
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from .token_usage import TokenUsage
 
@@ -95,8 +95,7 @@ class MultimodalResponse(BaseModel):
     debug_tools: Optional[str]
     topic_changed: bool = False  # Add this field
 
-    class Config:
-        use_enum_values = True  # This will serialize Enums using their values
+    model_config = ConfigDict(use_enum_values=True)
 
 class ExtractLearnedContextRequest(BaseModel):
     messages: List[Message]

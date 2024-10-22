@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from models import Message, Capability, TokenUsage
 from web_search import WebSearch
@@ -25,8 +25,7 @@ class AssistantResponse(BaseModel):
     image: Optional[str] = None
     topic_changed: bool = False  # Add this default field
 
-    class Config:
-        use_enum_values = True  # This will serialize Enums using their values
+    model_config = ConfigDict(use_enum_values=True)
 
 class Assistant(ABC):
     @abstractmethod
