@@ -21,6 +21,7 @@ class CustomModelAssistant(Assistant):
         vision: None,
         speculative_vision: bool
     ) -> AssistantResponse:
+        topic_changed = True
         print(f"Assistant received prompt: {prompt}")
         # Make the POST request
         if not prompt.strip():
@@ -48,7 +49,8 @@ class CustomModelAssistant(Assistant):
                 token_usage_by_model={},  # No token usage tracking in this case
                 capabilities_used=[Capability.ASSISTANT_KNOWLEDGE],
                 debug_tools="",
-                timings=""
+                timings="",
+                topic_changed=topic_changed
             )
         else:
             # Handle error case

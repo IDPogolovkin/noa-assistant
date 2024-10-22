@@ -257,14 +257,13 @@ async def api_mm(
         else:
             user_prompt = f"{mm.prompt} {voice_prompt}"
             # Set mm.prompt to user_prompt to ensure it's not None
-            
+
         mm.prompt = user_prompt
 
         print(f"Final user_prompt: {user_prompt}")
         # **Add this validation**
         if not user_prompt:
             raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
-        print(f"Final user_prompt: {user_prompt}")
 
         if not mm.messages:
             mm.messages = [Message(role='user', content=mm.prompt)]
@@ -323,6 +322,8 @@ async def api_mm(
                 speculative_vision=mm.speculative_vision
             )
 
+            print(f"Assistant_response check in app.py {assistant_response}")
+
             return MultimodalResponse(
                 user_prompt=user_prompt,
                 response=assistant_response.response,
@@ -333,7 +334,8 @@ async def api_mm(
                 input_tokens=0,
                 output_tokens=0,
                 timings=assistant_response.timings,
-                debug_tools=assistant_response.debug_tools
+                debug_tools=assistant_response.debug_tools,
+                topic_changed=assistant_response.topic_changed
             )
         except Exception as e:
             print(f"{traceback.format_exc()}")

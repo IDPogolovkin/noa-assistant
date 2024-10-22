@@ -23,6 +23,7 @@ class AssistantResponse:
     debug_tools: str    # debugging information about tools used (no particular format guaranteed)
     timings: str
     image: str | None = None
+    topic_changed: bool = False  # Add this default field
 
 class Assistant(ABC):
     @abstractmethod
