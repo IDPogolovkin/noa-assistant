@@ -323,8 +323,7 @@ async def api_mm(
             )
 
             print(f"Assistant_response check in app.py {assistant_response}")
-
-            return MultimodalResponse(
+            response_data = MultimodalResponse(
                 user_prompt=user_prompt,
                 response=assistant_response.response,
                 image=assistant_response.image,
@@ -337,9 +336,15 @@ async def api_mm(
                 debug_tools=assistant_response.debug_tools,
                 topic_changed=assistant_response.topic_changed
             )
+
+            # Log the response data
+            print(f"Response data being sent to client: {response_data.json()}")
+
+            return JSONResponse(content=response_data.dict())
+        
         except Exception as e:
             print(f"{traceback.format_exc()}")
-            raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
+            raise HTTPException(400, detail=f"===RESPONSE ERROR==={str(e)}: {traceback.format_exc()}")
 
     except Exception as e:
         print(f"{traceback.format_exc()}")

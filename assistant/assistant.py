@@ -25,6 +25,9 @@ class AssistantResponse:
     image: str | None = None
     topic_changed: bool = False  # Add this default field
 
+    class Config:
+        use_enum_values = True  # This will serialize Enums using their values
+
 class Assistant(ABC):
     @abstractmethod
     async def send_to_assistant(

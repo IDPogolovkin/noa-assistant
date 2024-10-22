@@ -95,6 +95,9 @@ class MultimodalResponse(BaseModel):
     debug_tools: Optional[str]
     topic_changed: bool = False  # Add this field
 
+    class Config:
+        use_enum_values = True  # This will serialize Enums using their values
+
 class ExtractLearnedContextRequest(BaseModel):
     messages: List[Message]
     existing_learned_context: Dict[str, str]
