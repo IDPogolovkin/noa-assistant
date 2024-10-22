@@ -23,7 +23,6 @@ class CustomModelAssistant(Assistant):
         vision: Optional[Vision],
         speculative_vision: bool
     ) -> AssistantResponse:
-        topic_changed = True
         print(f"Assistant received prompt: {prompt}")
         # Make the POST request
         if not prompt.strip():
@@ -32,9 +31,13 @@ class CustomModelAssistant(Assistant):
                 response="Error: Prompt cannot be empty.",
                 token_usage_by_model={},
                 capabilities_used=[Capability.ASSISTANT_KNOWLEDGE],
-                debug_tools="",
-                timings="",
-                topic_changed=False
+                debug_tools={},
+                timings={},
+                image=None,
+                topic_changed=False,
+                total_tokens=0,
+                input_tokens=0,
+                output_tokens=0
             )
         
         # Determine if the topic has changed
@@ -55,47 +58,45 @@ class CustomModelAssistant(Assistant):
                 response=answer,
                 token_usage_by_model={},  # No token usage tracking in this case
                 capabilities_used=[Capability.ASSISTANT_KNOWLEDGE],
-                debug_tools="",
-                timings="",
-                image=None,  # Explicitly set image to None
-                topic_changed=topic_changed
+                debug_tools={},  # Changed from "" to {}
+                timings={},      # Changed from "" to {}
+                image=None,      # Explicitly set image to None
+                topic_changed=topic_changed,
+                total_tokens=0,  # Added default values
+                input_tokens=0,  # Added default values
+                output_tokens=0  # Added default values
             )
+
         else:
             # Handle error case
             returned_response = AssistantResponse(
                 response="Error: Failed to get a response from the model.",
                 token_usage_by_model={},
                 capabilities_used=[Capability.ASSISTANT_KNOWLEDGE],
-                debug_tools="",
-                timings="",
+                debug_tools={},
+                timings={},
                 image=None,  # Explicitly set image to None
-                topic_changed=False
+                topic_changed=False,
+                total_tokens=0,  # Added default values
+                input_tokens=0,  # Added default values
+                output_tokens=0  # Added default values
             )
 
         return returned_response
     
     def detect_topic_change(self, prompt: str, message_history: Optional[List[Message]]) -> bool:
-        """
-        Simple method to detect if the topic has changed.
-        Compares the current prompt with the last user message.
-        Returns True if the topic is different, False otherwise.
-        """
         if not message_history or len(message_history) == 0:
-            # No previous messages, so it's a new topic
             return True
-        
-        # Find the last user message in the history
+
         last_user_message = None
         for message in reversed(message_history):
             if message.role == Role.USER:
                 last_user_message = message.content
                 break
-        
+
         if last_user_message:
-            # Compare the current prompt with the last user message
             return prompt.strip() != last_user_message.strip()
         else:
-            # No previous user message found
             return True
     
 Assistant.register(CustomModelAssistant)
