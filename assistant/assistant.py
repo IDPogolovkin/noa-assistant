@@ -7,7 +7,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -22,7 +22,7 @@ class AssistantResponse(BaseModel):
     response: str
     debug_tools: str    # debugging information about tools used (no particular format guaranteed)
     timings: str
-    image: str | None = None
+    image: Optional[str] = None
     topic_changed: bool = False  # Add this default field
 
     class Config:

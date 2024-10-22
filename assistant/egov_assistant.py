@@ -57,6 +57,7 @@ class CustomModelAssistant(Assistant):
                 capabilities_used=[Capability.ASSISTANT_KNOWLEDGE],
                 debug_tools="",
                 timings="",
+                image=None,  # Explicitly set image to None
                 topic_changed=topic_changed
             )
         else:
@@ -67,6 +68,7 @@ class CustomModelAssistant(Assistant):
                 capabilities_used=[Capability.ASSISTANT_KNOWLEDGE],
                 debug_tools="",
                 timings="",
+                image=None,  # Explicitly set image to None
                 topic_changed=False
             )
 
