@@ -9,14 +9,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
 
 from models import Message, Capability, TokenUsage
 from web_search import WebSearch
 from vision import Vision
 
 @dataclass
-class AssistantResponse(BaseModel):
+class AssistantResponse():
     token_usage_by_model: Dict[str, TokenUsage]
     capabilities_used: List[Capability]
     response: str
@@ -24,8 +23,6 @@ class AssistantResponse(BaseModel):
     timings: str
     image: Optional[str] = None
     topic_changed: bool = False  # Add this default field
-
-    model_config = ConfigDict(use_enum_values=True)
 
 class Assistant(ABC):
     @abstractmethod
