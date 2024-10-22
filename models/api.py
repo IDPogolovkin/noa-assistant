@@ -91,8 +91,8 @@ class MultimodalResponse(BaseModel):
     total_tokens: int
     input_tokens: int
     output_tokens: int
-    timings: Optional[str]
-    debug_tools: Optional[str]
+    timings: Optional[Dict]
+    debug_tools: Optional[Dict]
     topic_changed: bool = False  # Add this field
 
     model_config = ConfigDict(use_enum_values=True)
