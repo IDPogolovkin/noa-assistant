@@ -34,10 +34,7 @@ class CustomModelAssistant(Assistant):
                 debug_tools={},
                 timings={},
                 image=None,
-                topic_changed=False,
-                total_tokens=0,
-                input_tokens=0,
-                output_tokens=0
+                topic_changed=False
             )
         
         # Determine if the topic has changed
@@ -61,10 +58,7 @@ class CustomModelAssistant(Assistant):
                 debug_tools={},  # Changed from "" to {}
                 timings={},      # Changed from "" to {}
                 image=None,      # Explicitly set image to None
-                topic_changed=topic_changed,
-                total_tokens=0,  # Added default values
-                input_tokens=0,  # Added default values
-                output_tokens=0  # Added default values
+                topic_changed=topic_changed
             )
 
         else:
@@ -76,10 +70,7 @@ class CustomModelAssistant(Assistant):
                 debug_tools={},
                 timings={},
                 image=None,  # Explicitly set image to None
-                topic_changed=False,
-                total_tokens=0,  # Added default values
-                input_tokens=0,  # Added default values
-                output_tokens=0  # Added default values
+                topic_changed=False
             )
 
         return returned_response
