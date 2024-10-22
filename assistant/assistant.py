@@ -16,7 +16,7 @@ from web_search import WebSearch
 from vision import Vision
 
 @dataclass
-class AssistantResponse:
+class AssistantResponse(BaseModel):
     token_usage_by_model: Dict[str, TokenUsage]
     capabilities_used: List[Capability]
     response: str

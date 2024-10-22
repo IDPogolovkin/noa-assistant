@@ -338,9 +338,9 @@ async def api_mm(
             )
 
             # Log the response data
-            print(f"Response data being sent to client: {response_data.json()}")
+            print(f"Response data being sent to client: {response_data.model_dump_json()}")
 
-            return JSONResponse(content=response_data.dict())
+            return response_data
         
         except Exception as e:
             print(f"{traceback.format_exc()}")

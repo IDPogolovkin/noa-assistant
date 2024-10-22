@@ -22,11 +22,11 @@ class Message(BaseModel):
     content: str
 
 class Capability(str, Enum):
-    ASSISTANT_KNOWLEDGE = "assistant_knowledge"
-    WEB_SEARCH = "web_search"
-    VISION = "vision"
-    REVERSE_IMAGE_SEARCH = "reverse_image_search"
-    IMAGE_GENERATION = "image_generation"
+    ASSISTANT_KNOWLEDGE = 'assistant_knowledge'
+    WEB_SEARCH = 'web_search'
+    VISION = 'vision'
+    REVERSE_IMAGE_SEARCH = 'reverse_image_search'
+    IMAGE_GENERATION = 'image_generation'
 
 class SearchEngine(str, Enum):
     GOOGLE_REVERSE_IMAGE = "google_reverse_image"
