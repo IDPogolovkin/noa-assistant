@@ -26,8 +26,6 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
 from TTS.api import TTS
-from langdetect import detect
-import numpy as np
 from io import BytesIO
 import soundfile as sf
 

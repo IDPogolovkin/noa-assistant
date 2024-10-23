@@ -33,6 +33,4 @@ aiohttp
 groq
 opencv-python
 TTS
-langdetect
 soundfile
-numpy
