@@ -86,14 +86,13 @@ class MultimodalResponse(BaseModel):
     user_prompt: str
     response: str
     image: Optional[str]
+    message: Optional[str] = None  # Add this field
     token_usage_by_model: Dict[str, TokenUsage]
     capabilities_used: List[Capability]
     total_tokens: int
     input_tokens: int
     output_tokens: int
-    timings: Optional[Dict]
-    debug_tools: Optional[Dict]
-    topic_changed: bool = False  # Add this field
+    debug: Optional[Dict] = None    # Add this field
 
     model_config = ConfigDict(use_enum_values=True)
 

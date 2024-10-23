@@ -19,7 +19,7 @@ class AssistantResponse():
     token_usage_by_model: Dict[str, TokenUsage]
     capabilities_used: List[Capability]
     response: str
-    debug_tools: str    # debugging information about tools used (no particular format guaranteed)
+    debug_tools: str
     timings: str
     image: Optional[str] = None
     topic_changed: bool = False  # Add this default field

@@ -322,7 +322,17 @@ async def api_mm(
                 speculative_vision=mm.speculative_vision
             )
 
+            
+
             print(f"Assistant_response check in app.py {assistant_response}")
+
+            # Create the debug dict
+            debug_data = {
+                "topic_changed": assistant_response.topic_changed,
+                "timings": assistant_response.timings,
+                "debug_tools": assistant_response.debug_tools
+            }
+
             response_data = MultimodalResponse(
                 user_prompt=user_prompt,
                 response=assistant_response.response,
@@ -332,9 +342,7 @@ async def api_mm(
                 total_tokens=0,
                 input_tokens=0,
                 output_tokens=0,
-                timings=assistant_response.timings,
-                debug_tools=assistant_response.debug_tools,
-                topic_changed=assistant_response.topic_changed
+                debug=debug_data
             )
 
             # Log the response data
