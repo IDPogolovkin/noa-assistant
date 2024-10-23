@@ -86,6 +86,7 @@ class MultimodalResponse(BaseModel):
     user_prompt: str
     response: str
     image: Optional[str]
+    audio: Optional[str] = None  # Add this field
     message: Optional[str] = None  # Add this field
     token_usage_by_model: Dict[str, TokenUsage]
     capabilities_used: List[Capability]

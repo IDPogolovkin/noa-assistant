@@ -15,6 +15,7 @@ import openai
 import anthropic
 import groq
 import json
+import base64
 from pydantic import BaseModel, ValidationError
 from pydub import AudioSegment
 from fastapi import FastAPI, status, Form, UploadFile, Request
@@ -23,6 +24,8 @@ from fastapi.exceptions import HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+
+from google.cloud import texttospeech
 
 from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, Message
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
@@ -76,6 +79,26 @@ async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
         file=buffer,
     )
     return transcript.text
+
+async def generate_audio(text: str) -> bytes:
+    client = texttospeech.TextToSpeechAsyncClient()
+
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+
+    voice = texttospeech.VoiceSelectionParams(
+        #language_code="en-US",  # Adjust language code as needed
+        ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+    )
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+
+    response = await client.synthesize_speech(
+        input=synthesis_input, voice=voice, audio_config=audio_config
+    )
+
+    return response.audio_content
 
 def validate_assistant_model(model: str | None, models: List[str]) -> str:
     """
@@ -262,8 +285,8 @@ async def api_mm(
 
         print(f"Final user_prompt: {user_prompt}")
         # **Add this validation**
-        if not user_prompt:
-            raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
+        # if not user_prompt:
+        #     raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
         if not mm.messages:
             mm.messages = [Message(role='user', content=mm.prompt)]
@@ -322,9 +345,13 @@ async def api_mm(
                 speculative_vision=mm.speculative_vision
             )
 
-            
-
             print(f"Assistant_response check in app.py {assistant_response}")
+
+            # Generate audio if tts is enabled
+            audio_base64 = None
+            # if tts_enabled:
+            audio_data = await generate_audio(assistant_response.response)
+            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
 
             # Create the debug dict
             debug_data = {
@@ -338,6 +365,7 @@ async def api_mm(
                 response=assistant_response.response,
                 message=assistant_response.response,  # Add this line
                 image=assistant_response.image,
+                audio=audio_base64,
                 token_usage_by_model=assistant_response.token_usage_by_model,
                 capabilities_used=assistant_response.capabilities_used,
                 total_tokens=0,

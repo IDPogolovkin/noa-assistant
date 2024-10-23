@@ -32,3 +32,4 @@ anthropic==0.25.6
 aiohttp
 groq
 opencv-python
+google-cloud-texttospeech
