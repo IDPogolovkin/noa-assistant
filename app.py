@@ -336,6 +336,7 @@ async def api_mm(
             response_data = MultimodalResponse(
                 user_prompt=user_prompt,
                 response=assistant_response.response,
+                message=assistant_response.response,  # Add this line
                 image=assistant_response.image,
                 token_usage_by_model=assistant_response.token_usage_by_model,
                 capabilities_used=assistant_response.capabilities_used,
