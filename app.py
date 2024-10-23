@@ -25,9 +25,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
-from TTS.api import TTS
-from io import BytesIO
-import soundfile as sf
+import pyttsx3
+import io
+from pydub import AudioSegment
 
 from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, Message
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
@@ -84,25 +84,38 @@ async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
 
 def generate_audio(text: str) -> bytes:
     try:
-        # Detect language
-        language_code = "en"
-        
-        # Load the TTS model (multilingual model)
-        model_name = "tts_models/multilingual/multi-dataset/xtts_v2"
-        tts = TTS(model_name)
+        # Initialize the TTS engine
+        engine = pyttsx3.init()
 
-        # Generate speech
-        audio_content = tts.tts(text=text, language=language_code)
+        # Set properties (optional)
+        engine.setProperty('rate', 150)      # Speed percent (can go over 100)
+        engine.setProperty('volume', 1.0)    # Volume 0.0 to 1.0
 
-        # Convert the audio numpy array to bytes
-        buffer = BytesIO()
-        sf.write(buffer, audio_content, tts.synthesizer.output_sample_rate, format='WAV')
-        buffer.seek(0)
+        # Save the speech to a temporary file in WAV format
+        temp_filename = 'temp_audio.wav'
+        engine.save_to_file(text, temp_filename)
+        engine.runAndWait()
 
-        return buffer.read()
+        # Read the WAV file and convert to MP3 using pydub
+        sound = AudioSegment.from_wav(temp_filename)
+        audio_buffer = io.BytesIO()
+        sound.export(audio_buffer, format='mp3')
+        audio_data = audio_buffer.getvalue()
+
+        # Clean up temporary file
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+
+        return audio_data
+
     except Exception as e:
         print(f"Error generating audio: {e}")
         return None
+
+# This is the asynchronous wrapper for the generate_audio function
+async def generate_audio_async(text: str) -> bytes:
+    # Run the blocking `generate_audio` function in a separate thread
+    return await asyncio.to_thread(generate_audio, text)
 
 def validate_assistant_model(model: str | None, models: List[str]) -> str:
     """
@@ -354,7 +367,7 @@ async def api_mm(
             # Generate audio if tts is enabled
             audio_base64 = None
             # if tts_enabled:
-            audio_data = generate_audio(assistant_response.response)
+            audio_data = await generate_audio_async(assistant_response.response)
             if audio_data:
                 audio_base64 = base64.b64encode(audio_data).decode('utf-8')
 

@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install ffmpeg and OpenGL (libgl1) for OpenCV
-RUN apt-get update && apt-get install -y ffmpeg libgl1 espeak-ng
+RUN apt-get update && apt-get install -y ffmpeg libgl1 espeak
 
 # Copy the rest of the application code to the container
 COPY . .
