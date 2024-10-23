@@ -25,7 +25,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
-from google.cloud import texttospeech
+from TTS.api import TTS
+from langdetect import detect
+import numpy as np
+from io import BytesIO
+import soundfile as sf
 
 from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, Message
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
@@ -65,7 +69,7 @@ class Checker:
                 detail=jsonable_encoder(e.errors()),
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
-
+        
 async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
     # Create a file-like object for Whisper API to consume
     audio = AudioSegment.from_file(BytesIO(audio_bytes))
@@ -75,30 +79,32 @@ async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
     buffer.seek(0)
     # Whisper
     transcript = await client.audio.translations.create(
-        model="whisper-1", 
+        model="whisper-1",
         file=buffer,
     )
     return transcript.text
 
-async def generate_audio(text: str) -> bytes:
-    client = texttospeech.TextToSpeechAsyncClient()
+def generate_audio(text: str) -> bytes:
+    try:
+        # Detect language
+        language_code = "en"
+        
+        # Load the TTS model (multilingual model)
+        model_name = "tts_models/multilingual/multi-dataset/xtts_v2"
+        tts = TTS(model_name)
 
-    synthesis_input = texttospeech.SynthesisInput(text=text)
+        # Generate speech
+        audio_content = tts.tts(text=text, language=language_code)
 
-    voice = texttospeech.VoiceSelectionParams(
-        #language_code="en-US",  # Adjust language code as needed
-        ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
-    )
+        # Convert the audio numpy array to bytes
+        buffer = BytesIO()
+        sf.write(buffer, audio_content, tts.synthesizer.output_sample_rate, format='WAV')
+        buffer.seek(0)
 
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
-    )
-
-    response = await client.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
-    )
-
-    return response.audio_content
+        return buffer.read()
+    except Exception as e:
+        print(f"Error generating audio: {e}")
+        return None
 
 def validate_assistant_model(model: str | None, models: List[str]) -> str:
     """
@@ -350,8 +356,9 @@ async def api_mm(
             # Generate audio if tts is enabled
             audio_base64 = None
             # if tts_enabled:
-            audio_data = await generate_audio(assistant_response.response)
-            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+            audio_data = generate_audio(assistant_response.response)
+            if audio_data:
+                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
 
             # Create the debug dict
             debug_data = {
