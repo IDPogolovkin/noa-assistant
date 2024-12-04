@@ -31,6 +31,8 @@ replicate
 anthropic==0.25.6
 aiohttp
 groq
-opencv-python
-pyttsx3
 pydub
+langdetect
+transliterate
+qaznltk
+dotenv
