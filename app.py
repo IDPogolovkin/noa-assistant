@@ -76,7 +76,7 @@ class Checker:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
         
-async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
+async def transcribe(client, audio_bytes: bytes) -> str:
     # Create a file-like object for Whisper API to consume
     audio = AudioSegment.from_file(BytesIO(audio_bytes))
     buffer = BytesIO()
@@ -84,7 +84,8 @@ async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
     audio.export(buffer, format="mp4")
     buffer.seek(0)
     # Whisper
-    transcript = await client.audio.translations.create(
+    transcript = await asyncio.to_thread(
+        client.audio.transcribe,
         model="whisper-1",
         file=buffer,
     )
@@ -112,7 +113,7 @@ async def generate_audio_async(text: str, model="tts-1", voice="alloy") -> bytes
 
     # Stream the response content to a BytesIO buffer
     audio_buffer = BytesIO()
-    async for chunk in response.iter_bytes():
+    for chunk in response.iter_bytes():
         audio_buffer.write(chunk)
     audio_buffer.seek(0)  # Reset the pointer to the beginning of the buffer
 
