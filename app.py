@@ -88,7 +88,7 @@ async def transcribe(client, audio_bytes: bytes) -> str:
         model="whisper-1",
         file=buffer,
     )
-    return transcript['text']
+    return transcript.text
 
 def transliterate_text(text, lang):
     if lang == 'ru':
