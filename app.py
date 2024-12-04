@@ -365,58 +365,54 @@ async def api_mm(
 
             print(f"Assistant_response {assistant_response}")
 
-            try:
-                # Detect the language of the assistant's response
-                language = detect(assistant_response.response)
-                print(f"Detected language: {language}")
+            # Detect the language of the assistant's response
+            language = detect(assistant_response.response)
+            print(f"Detected language: {language}")
 
-                # Transliterate the response text if necessary
-                display_text = transliterate_text(assistant_response.response, language)
-                print(f"Display text: {display_text}")
+            # Transliterate the response text if necessary
+            display_text = transliterate_text(assistant_response.response, language)
+            print(f"Display text: {display_text}")
 
-                # Generate audio using OpenAI's TTS API
-                audio_data = await generate_audio_async(assistant_response.response)
-                if audio_data:
-                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                else:
-                    audio_base64 = None
+            # Generate audio using OpenAI's TTS API
+            audio_data = await generate_audio_async(assistant_response.response)
+            if audio_data:
+                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+            else:
+                audio_base64 = None
 
-                # Create the debug dict
-                debug_data = {
-                    "topic_changed": assistant_response.topic_changed,
-                    "timings": assistant_response.timings,
-                    "debug_tools": assistant_response.debug_tools
-                }
+            # Create the debug dict
+            debug_data = {
+                "topic_changed": assistant_response.topic_changed,
+                "timings": assistant_response.timings,
+                "debug_tools": assistant_response.debug_tools
+            }
 
-                response_data = MultimodalResponse(
-                    user_prompt=user_prompt,
-                    response=display_text,  # Use the transliterated text for display
-                    message=display_text,  # Add this line
-                    image=assistant_response.image,
-                    audio=audio_base64,
-                    token_usage_by_model=assistant_response.token_usage_by_model,
-                    capabilities_used=assistant_response.capabilities_used,
-                    total_tokens=0,
-                    input_tokens=0,
-                    output_tokens=0,
-                    debug=debug_data
-                )
+            response_data = MultimodalResponse(
+                user_prompt=user_prompt,
+                response=display_text,  # Use the transliterated text for display
+                message=display_text,  # Add this line
+                image=assistant_response.image,
+                audio=audio_base64,
+                token_usage_by_model=assistant_response.token_usage_by_model,
+                capabilities_used=assistant_response.capabilities_used,
+                total_tokens=0,
+                input_tokens=0,
+                output_tokens=0,
+                debug=debug_data
+            )
 
-                # Log the response data
-                print(f"Response data being sent to client: {response_data.model_dump_json()}")
+            # Log the response data
+            print(f"Response data being sent to client: {response_data.model_dump_json()}")
 
-                return response_data
-            
-            except Exception as e:
-                print(f"{traceback.format_exc()}")
-                raise HTTPException(400, detail=f"===RESPONSE ERROR==={str(e)}: {traceback.format_exc()}")
-
+            return response_data
+        
         except Exception as e:
             print(f"{traceback.format_exc()}")
-            raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
-        
+            raise HTTPException(400, detail=f"===RESPONSE ERROR==={str(e)}: {traceback.format_exc()}")
+
     except Exception as e:
-            print(e)
+        print(f"{traceback.format_exc()}")
+        raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
 
 @app.post("/extract_learned_context")
 async def api_extract_learned_context(request: Request, params: Annotated[str, Form()]):
