@@ -85,11 +85,11 @@ async def transcribe(client, audio_bytes: bytes) -> str:
     buffer.seek(0)
     # Whisper
     transcript = await asyncio.to_thread(
-        client.audio.transcribe,
+        client.audio.transcriptions.create,
         model="whisper-1",
         file=buffer,
     )
-    return transcript.text
+    return transcript['text']
 
 def transliterate_text(text, lang):
     if lang == 'ru':
