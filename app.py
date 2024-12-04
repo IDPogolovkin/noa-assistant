@@ -25,10 +25,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
-import pyttsx3
-import io
-from pydub import AudioSegment
-
 from models import Capability, TokenUsage, SearchAPI, VisionModel, GenerateImageService, MultimodalRequest, MultimodalResponse, ExtractLearnedContextRequest, ExtractLearnedContextResponse, Message
 from web_search import WebSearch, DataForSEOWebSearch, SerpWebSearch, PerplexityWebSearch
 from vision import Vision, GPT4Vision, ClaudeVision
@@ -36,13 +32,25 @@ from vision.utils import process_image
 from generate_image import ReplicateGenerateImage
 from assistant import Assistant, AssistantResponse, GPTAssistant, ClaudeAssistant, extract_learned_context, CustomModelAssistant
 
+from langdetect import detect
+from transliterate import translit as russian_translit
+from qaznltk import qaznltk as qnltk 
+from io import BytesIO
+from pydub import AudioSegment
+from dotenv import load_dotenv
+
+# Initialize Kazakh transliterator
+qn = qnltk.QazNLTK()
+
+load_dotenv()
 
 ####################################################################################################
 # Configuration
 ####################################################################################################
 
 EXPERIMENT_AI_PORT = os.environ.get('EXPERIMENT_AI_PORT',8000)
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
+gpt_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = gpt_key
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", None)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", None)
 
@@ -82,40 +90,33 @@ async def transcribe(client: openai.AsyncOpenAI, audio_bytes: bytes) -> str:
     )
     return transcript.text
 
-def generate_audio(text: str) -> bytes:
-    try:
-        # Initialize the TTS engine
-        engine = pyttsx3.init()
+def transliterate_text(text, lang):
+    if lang == 'ru':
+        return russian_translit(text, reversed=True)
+    elif lang == 'kk':
+        return qn.convert2latin_iso9(text)
+    return text
 
-        # Set properties (optional)
-        engine.setProperty('rate', 150)      # Speed percent (can go over 100)
-        engine.setProperty('volume', 1.0)    # Volume 0.0 to 1.0
+async def generate_audio_async(text: str, model="tts-1", voice="alloy") -> bytes:
+    """
+    Generates audio from input text using OpenAI's TTS API.
+    """
+    client = app.state.openai_client
 
-        # Save the speech to a temporary file in WAV format
-        temp_filename = 'temp_audio.wav'
-        engine.save_to_file(text, temp_filename)
-        engine.runAndWait()
+    # Create the speech audio
+    response = await client.audio.speech.create(
+        model=model,
+        voice=voice,
+        input=text,
+    )
 
-        # Read the WAV file and convert to MP3 using pydub
-        sound = AudioSegment.from_wav(temp_filename)
-        audio_buffer = io.BytesIO()
-        sound.export(audio_buffer, format='mp3')
-        audio_data = audio_buffer.getvalue()
+    # Stream the response content to a BytesIO buffer
+    audio_buffer = BytesIO()
+    async for chunk in response.iter_bytes():
+        audio_buffer.write(chunk)
+    audio_buffer.seek(0)  # Reset the pointer to the beginning of the buffer
 
-        # Clean up temporary file
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-
-        return audio_data
-
-    except Exception as e:
-        print(f"Error generating audio: {e}")
-        return None
-
-# This is the asynchronous wrapper for the generate_audio function
-async def generate_audio_async(text: str) -> bytes:
-    # Run the blocking `generate_audio` function in a separate thread
-    return await asyncio.to_thread(generate_audio, text)
+    return audio_buffer.getvalue()  # Return the audio bytes
 
 def validate_assistant_model(model: str | None, models: List[str]) -> str:
     """
@@ -284,10 +285,10 @@ async def api_mm(
                 with open(filepath, "wb") as f:
                     f.write(audio_bytes)
             if mm.openai_key and len(mm.openai_key) > 0:
-                client = openai.AsyncOpenAI(api_key=mm.openai_key)
+                client = openai.AsyncOpenAI(api_key=openai.api_key)
             else:
                 # Initialize your OpenAI client here
-                client = openai.AsyncOpenAI(api_key="YOUR_DEFAULT_OPENAI_API_KEY")
+                client = openai.AsyncOpenAI(api_key=openai.api_key)
             voice_prompt = await transcribe(client=client, audio_bytes=audio_bytes)
 
         # Construct final prompt
@@ -362,48 +363,57 @@ async def api_mm(
                 speculative_vision=mm.speculative_vision
             )
 
-            print(f"Assistant_response check in app.py {assistant_response}")
+            print(f"Assistant_response {assistant_response}")
 
-            # Generate audio if tts is enabled
-            audio_base64 = None
-            # if tts_enabled:
-            audio_data = await generate_audio_async(assistant_response.response)
-            if audio_data:
-                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+            try:
+                # Detect the language of the assistant's response
+                language = detect(assistant_response.response)
+                print(f"Detected language: {language}")
 
-            # Create the debug dict
-            debug_data = {
-                "topic_changed": assistant_response.topic_changed,
-                "timings": assistant_response.timings,
-                "debug_tools": assistant_response.debug_tools
-            }
+                # Transliterate the response text if necessary
+                display_text = transliterate_text(assistant_response.response, language)
+                print(f"Display text: {display_text}")
 
-            response_data = MultimodalResponse(
-                user_prompt=user_prompt,
-                response=assistant_response.response,
-                message=assistant_response.response,  # Add this line
-                image=assistant_response.image,
-                audio=audio_base64,
-                token_usage_by_model=assistant_response.token_usage_by_model,
-                capabilities_used=assistant_response.capabilities_used,
-                total_tokens=0,
-                input_tokens=0,
-                output_tokens=0,
-                debug=debug_data
-            )
+                # Generate audio using OpenAI's TTS API
+                audio_data = await generate_audio_async(assistant_response.response)
+                if audio_data:
+                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                else:
+                    audio_base64 = None
 
-            # Log the response data
-            print(f"Response data being sent to client: {response_data.model_dump_json()}")
+                # Create the debug dict
+                debug_data = {
+                    "topic_changed": assistant_response.topic_changed,
+                    "timings": assistant_response.timings,
+                    "debug_tools": assistant_response.debug_tools
+                }
 
-            return response_data
-        
+                response_data = MultimodalResponse(
+                    user_prompt=user_prompt,
+                    response=display_text,  # Use the transliterated text for display
+                    message=assistant_response.response,  # Add this line
+                    image=assistant_response.image,
+                    audio=audio_base64,
+                    token_usage_by_model=assistant_response.token_usage_by_model,
+                    capabilities_used=assistant_response.capabilities_used,
+                    total_tokens=0,
+                    input_tokens=0,
+                    output_tokens=0,
+                    debug=debug_data
+                )
+
+                # Log the response data
+                print(f"Response data being sent to client: {response_data.model_dump_json()}")
+
+                return response_data
+            
+            except Exception as e:
+                print(f"{traceback.format_exc()}")
+                raise HTTPException(400, detail=f"===RESPONSE ERROR==={str(e)}: {traceback.format_exc()}")
+
         except Exception as e:
             print(f"{traceback.format_exc()}")
-            raise HTTPException(400, detail=f"===RESPONSE ERROR==={str(e)}: {traceback.format_exc()}")
-
-    except Exception as e:
-        print(f"{traceback.format_exc()}")
-        raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
+            raise HTTPException(400, detail=f"{str(e)}: {traceback.format_exc()}")
 
 @app.post("/extract_learned_context")
 async def api_extract_learned_context(request: Request, params: Annotated[str, Form()]):
@@ -454,7 +464,7 @@ if __name__ == "__main__":
     options = parser.parse_args()
 
     # AI clients
-    app.state.openai_client = openai.AsyncOpenAI(api_key="123123")
+    app.state.openai_client = openai.AsyncOpenAI(api_key=openai.api_key)
     app.state.anthropic_client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
     app.state.groq_client = groq.AsyncGroq(api_key="123123")
 
