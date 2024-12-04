@@ -391,7 +391,7 @@ async def api_mm(
                 response_data = MultimodalResponse(
                     user_prompt=user_prompt,
                     response=display_text,  # Use the transliterated text for display
-                    message=assistant_response.response,  # Add this line
+                    message=display_text,  # Add this line
                     image=assistant_response.image,
                     audio=audio_base64,
                     token_usage_by_model=assistant_response.token_usage_by_model,
