@@ -84,7 +84,7 @@ async def transcribe(client, audio_bytes: bytes) -> str:
     audio.export(buffer, format="mp4")
     buffer.seek(0)
     # Whisper
-    transcript = client.audio.transcriptions.create(
+    transcript = await client.audio.transcriptions.create(
         model="whisper-1",
         file=buffer,
     )
