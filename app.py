@@ -374,11 +374,11 @@ async def api_mm(
             print(f"Display text: {display_text}")
 
             # Generate audio using OpenAI's TTS API
-            # audio_data = await generate_audio_async(assistant_response.response)
-            # if audio_data:
-            #     audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            # else:
-            #     audio_base64 = None
+            audio_data = await generate_audio_async(assistant_response.response)
+            if audio_data:
+                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+            else:
+                audio_base64 = None
 
             # Create the debug dict
             debug_data = {
@@ -392,7 +392,7 @@ async def api_mm(
                 response=display_text,  # Use the transliterated text for display
                 message=display_text,  # Add this line
                 image=assistant_response.image,
-                # audio=audio_base64,
+                audio=audio_base64,
                 token_usage_by_model=assistant_response.token_usage_by_model,
                 capabilities_used=assistant_response.capabilities_used,
                 total_tokens=0,
