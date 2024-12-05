@@ -294,12 +294,12 @@ async def api_mm(
         # Construct final prompt
         if not mm.prompt or mm.prompt.strip() == "":
             mm.prompt = voice_prompt  # Set the prompt to the transcribed audio
-            user_prompt = voice_prompt
+            user_prompt = f"limit answer to 25 words {voice_prompt}"
         else:
-            user_prompt = f"{mm.prompt} {voice_prompt}"
+            user_prompt = f"limit answer to 25 words {mm.prompt} {voice_prompt}"
             # Set mm.prompt to user_prompt to ensure it's not None
 
-        mm.prompt = user_prompt
+        mm.prompt = f"limit answer to 25 words {user_prompt}"
 
         print(f"Final user_prompt: {user_prompt}")
         # **Add this validation**
@@ -390,7 +390,7 @@ async def api_mm(
             response_data = MultimodalResponse(
                 user_prompt=user_prompt,
                 response=display_text,  # Use the transliterated text for display
-                message=display_text,  # Add this line
+                message=display_text,
                 image=assistant_response.image,
                 audio=audio_base64,
                 token_usage_by_model=assistant_response.token_usage_by_model,
