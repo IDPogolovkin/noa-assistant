@@ -370,8 +370,8 @@ async def api_mm(
             print(f"Detected language: {language}")
 
             # Transliterate the response text if necessary
-            # display_text = transliterate_text(assistant_response.response, language)
-            # print(f"Display text: {display_text}")
+            display_text = transliterate_text(assistant_response.response, language)
+            print(f"Display text: {display_text}")
 
             # Generate audio using OpenAI's TTS API
             # audio_data = await generate_audio_async(assistant_response.response)
@@ -389,8 +389,8 @@ async def api_mm(
 
             response_data = MultimodalResponse(
                 user_prompt=user_prompt,
-                response=assistant_response.response,  # Use the transliterated text for display
-                message=assistant_response.response,  # Add this line
+                response=display_text,  # Use the transliterated text for display
+                message=display_text,  # Add this line
                 image=assistant_response.image,
                 # audio=audio_base64,
                 token_usage_by_model=assistant_response.token_usage_by_model,
