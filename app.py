@@ -294,12 +294,12 @@ async def api_mm(
         # Construct final prompt
         if not mm.prompt or mm.prompt.strip() == "":
             mm.prompt = voice_prompt  # Set the prompt to the transcribed audio
-            user_prompt = f"limit answer to 25 words {voice_prompt}"
+            user_prompt = f"limit answer to 20 words {voice_prompt}"
         else:
-            user_prompt = f"limit answer to 25 words {mm.prompt} {voice_prompt}"
+            user_prompt = f"limit answer to 20 words {mm.prompt} {voice_prompt}"
             # Set mm.prompt to user_prompt to ensure it's not None
 
-        mm.prompt = f"limit answer to 25 words {user_prompt}"
+        mm.prompt = f"limit answer to 20 words {user_prompt}"
 
         print(f"Final user_prompt: {user_prompt}")
         # **Add this validation**
