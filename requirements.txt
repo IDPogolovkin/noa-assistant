@@ -37,3 +37,4 @@ langdetect
 transliterate
 qaznltk
 python-dotenv
+aiohttp
