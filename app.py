@@ -55,7 +55,7 @@ openai.api_key = gpt_key
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", None)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", None)
 
-IAM_TOKEN = os.getenv("YANDEX_IAM_TOKEN")
+API_TOKEN = os.getenv("YANDEX_API_TOKEN")
 FOLDER_ID = os.getenv("YANDEX_FOLDER_ID")
 
 
@@ -422,7 +422,7 @@ async def translate_text(text, target_language):
     url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {IAM_TOKEN}"
+        "Authorization": f"Bearer {API_TOKEN}"
     }
     body = {
         "folderId": FOLDER_ID,
