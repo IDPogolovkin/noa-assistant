@@ -100,6 +100,8 @@ def transliterate_text(text, lang):
         return russian_translit(text, reversed=True)
     elif lang == 'kk':
         return qn.convert2latin_iso9(text)
+    elif lang == 'kz':
+        return qn.convert2latin_iso9(text)
     return text
 
 async def generate_audio_async(text: str, model="tts-1", voice="alloy") -> bytes:
@@ -481,12 +483,8 @@ async def translator_endpoint(
         # -- (4) Detect language, transliterate if RU/KK --
         language = detect(translated_text)
         print(f"Detected language of translation: {language}")
-        supported_languages = ['ru', 'kk', 'en', 'uk']
 
-        if language in supported_languages:
-            display_text = transliterate_text(translated_text, language)
-        else:
-            display_text = translated_text
+        display_text = transliterate_text(translated_text, language)
 
         print(f"Final display text (transliterated if RU/KK): {display_text}")
 
