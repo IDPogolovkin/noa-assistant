@@ -422,7 +422,7 @@ async def translate_text(text, target_language):
     url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_TOKEN}"
+        "Authorization": f"Api-Key {API_TOKEN}"
     }
     body = {
         "folderId": FOLDER_ID,
