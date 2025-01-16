@@ -5,6 +5,7 @@
 #
 
 import asyncio
+import requests
 from datetime import datetime
 from io import BytesIO
 import os
@@ -95,6 +96,49 @@ async def transcribe(client, audio_bytes: bytes, prompt, language) -> str:
         language=language
     )
     return transcript.text
+
+async def transcribe_yandex(audio_bytes: bytes, language: str) -> str:
+    """
+    Transcribe audio using Yandex SpeechKit.
+
+    :param audio_bytes: The audio content in bytes.
+    :param language: Recognition language (e.g., "ru-RU").
+    :param iam_token: API key for authentication.
+    :param folder_id: Yandex folder ID where the SpeechKit service is enabled.
+    :return: Transcription text.
+    """
+    # Convert audio to .ogg format
+    audio = AudioSegment.from_file(BytesIO(audio_bytes))
+    buffer = BytesIO()
+    buffer.name = "speech.ogg"
+    audio.export(buffer, format="ogg", codec="libvorbis")
+    buffer.seek(0)
+
+    # Set up the request headers and parameters
+    headers = {
+        "Authorization": f"Api-Key {API_TOKEN}"
+    }
+    params = {
+        "folderId": FOLDER_ID,
+        "lang": language
+    }
+
+    # Send the request to Yandex SpeechKit
+    response_yand = requests.post(
+        url="https://stt.api.cloud.yandex.net/speech/v1/stt:recognize",
+        headers=headers,
+        params=params,
+        data=buffer,
+        timeout=120
+    )
+
+    # Check for errors in the response
+    if response_yand.status_code != 200:
+        raise Exception(f"Yandex SpeechKit API error: {response_yand.status_code} - {response_yand.text}")
+
+    # Parse and return the transcription result
+    result = response_yand.json()
+    return result.get("result", "")
 
 def transliterate_text(text, lang):
     if lang == 'ru':
@@ -297,7 +341,7 @@ async def api_mm(
             else:
                 # Initialize your OpenAI client here
                 client = openai.AsyncOpenAI(api_key=openai.api_key)
-            voice_prompt = await transcribe(client=client, audio_bytes=audio_bytes, prompt="", language="")
+            voice_prompt = await transcribe_yandex(audio_bytes=audio_bytes, language="kk-KZ")
 
         # Construct final prompt
         if not mm.prompt or mm.prompt.strip() == "":
@@ -464,7 +508,7 @@ async def translator_endpoint(
             audio_bytes = await audio.read()
             # Reuse openai.AsyncOpenAI from your app.state
             client = app.state.openai_client
-            transcribed_text = await transcribe(client=client, audio_bytes=audio_bytes, prompt="", language="kk")
+            transcribed_text = await transcribe_yandex(audio_bytes=audio_bytes, language="kk-KZ")
             print(f"Transcribed text: {transcribed_text}")
 
         # -- (2) Combine user-provided text + transcribed_text --
