@@ -341,7 +341,7 @@ async def api_mm(
             else:
                 # Initialize your OpenAI client here
                 client = openai.AsyncOpenAI(api_key=openai.api_key)
-            voice_prompt = await transcribe_yandex(audio_bytes=audio_bytes, language="kk-KZ")
+            voice_prompt = await transcribe_yandex(audio_bytes=audio_bytes, language="")
 
         # Construct final prompt
         if not mm.prompt or mm.prompt.strip() == "":
