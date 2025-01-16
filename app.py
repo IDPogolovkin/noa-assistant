@@ -80,7 +80,7 @@ class Checker:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
         
-async def transcribe(client, audio_bytes: bytes, prompt) -> str:
+async def transcribe(client, audio_bytes: bytes, prompt, language) -> str:
     # Create a file-like object for Whisper API to consume
     audio = AudioSegment.from_file(BytesIO(audio_bytes))
     buffer = BytesIO()
@@ -92,7 +92,7 @@ async def transcribe(client, audio_bytes: bytes, prompt) -> str:
         model="whisper-1",
         file=buffer,
         prompt=prompt,
-        language="kk"
+        language=language
     )
     return transcript.text
 
@@ -297,7 +297,7 @@ async def api_mm(
             else:
                 # Initialize your OpenAI client here
                 client = openai.AsyncOpenAI(api_key=openai.api_key)
-            voice_prompt = await transcribe(client=client, audio_bytes=audio_bytes, prompt="")
+            voice_prompt = await transcribe(client=client, audio_bytes=audio_bytes, prompt="", language="")
 
         # Construct final prompt
         if not mm.prompt or mm.prompt.strip() == "":
@@ -464,7 +464,7 @@ async def translator_endpoint(
             audio_bytes = await audio.read()
             # Reuse openai.AsyncOpenAI from your app.state
             client = app.state.openai_client
-            transcribed_text = await transcribe(client=client, audio_bytes=audio_bytes, prompt="Бұл мәтін қазақ тілінде болады.")
+            transcribed_text = await transcribe(client=client, audio_bytes=audio_bytes, prompt="", language="kk")
             print(f"Transcribed text: {transcribed_text}")
 
         # -- (2) Combine user-provided text + transcribed_text --
