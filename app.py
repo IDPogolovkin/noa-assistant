@@ -484,7 +484,7 @@ async def translate_text(text, target_language):
             result = await response.json()
             return result['translations'][0]['text']
     
-@app.post("/translator")
+@app.post("/kz")
 async def translator_endpoint(
     audio: Optional[UploadFile] = File(None),
     source_text: Optional[str] = Form(None),
@@ -540,6 +540,91 @@ async def translator_endpoint(
         # We can store debug info in a dict (like in /mm)
         debug_data = {
             "step": "translator_endpoint",
+            "target_language": target_language
+        }
+
+        # -- (6) Return a MultimodalResponse object --
+        # We do not show an image, so `image=None`.
+        # We'll reuse "transcribed_text" in user_prompt, 
+        # and store the final "display_text" in 'response' and 'message'.
+        response_data = MultimodalResponse(
+            user_prompt=transcribed_text,
+            response=display_text,
+            message=display_text,
+            image=None,
+            audio=audio_base64,
+            token_usage_by_model={},
+            capabilities_used=[],  # add any relevant capabilities
+            total_tokens=0,
+            input_tokens=0,
+            output_tokens=0,
+            debug=debug_data
+        )
+
+        # Log the response
+        print(f"Translator Response data: {response_data.model_dump_json()}")
+        return response_data
+
+    except Exception as e:
+        print(f"{traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=f"===RESPONSE ERROR=== {str(e)}: {traceback.format_exc()}")
+    
+@app.post("/fr")
+async def translator_endpoint_fr(
+    audio: Optional[UploadFile] = File(None),
+    source_text: Optional[str] = Form(None),
+    target_language: Optional[str] = Form("ru")  # default to Russian
+):
+    """
+    A dedicated Translator endpoint returning a MultimodalResponse, like /mm.
+    
+    1) Transcribe audio if present.
+    2) Combine transcription + source_text for a final 'transcribed_text'.
+    3) Translate into `target_language`.
+    4) Transliterate if RU/KK.
+    5) Generate TTS audio (base64).
+    6) Return a MultimodalResponse object.
+    """
+    try:
+        transcribed_text = ""
+
+        # -- (1) Transcribe audio if present --
+        if audio:
+            audio_bytes = await audio.read()
+            # Reuse openai.AsyncOpenAI from your app.state
+            client = app.state.openai_client
+            transcribed_text = await transcribe_yandex(audio_bytes=audio_bytes, language="auto")
+            print(f"Transcribed text: {transcribed_text}")
+
+        # -- (2) Combine user-provided text + transcribed_text --
+        if source_text:
+            if transcribed_text.strip():
+                transcribed_text += f" {source_text}"
+            else:
+                transcribed_text = source_text
+
+        if not transcribed_text.strip():
+            raise HTTPException(status_code=400, detail="No text to translate (empty audio transcription or source_text).")
+
+        # -- (3) Translate text into target_language using Yandex --
+        translated_text = await translate_text(text=transcribed_text, target_language=target_language)
+        print(f"Translated text: {translated_text}")
+
+        # -- (4) Detect language, transliterate if RU/KK --
+        language = detect(translated_text)
+        print(f"Detected language of translation: {language}")
+
+        display_text = transliterate_text(translated_text, language)
+
+        print(f"Final display text (transliterated if RU/KK): {display_text}")
+
+        # -- (5) Generate TTS audio from the final translation --
+        audio_data = await generate_audio_async(translated_text)
+        audio_base64 = base64.b64encode(audio_data).decode("utf-8") if audio_data else None
+
+        # We can store debug info in a dict (like in /mm)
+        debug_data = {
+            "step": "translator_endpoint_fr",
             "target_language": target_language
         }
 
